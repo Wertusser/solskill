@@ -3,7 +3,7 @@
 Add to your project (requires [foundry](https://book.getfoundry.sh/)):
 
 ```bash
-forge install <>
+forge install Wertusser/solskill
 ```
 
 ---
