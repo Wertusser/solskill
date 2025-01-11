@@ -109,9 +109,9 @@ contract LibSkillTest is Test {
         rank[1] = 2;
         rank[2] = 1;
 
-        // showRatings(ratings[0]);
+        showRatings(ratings);
         ratings = LibSkill.updateTeamRatings(ratings, rank);
-        // showRatings(ratings);
+        showRatings(ratings);
     }
 
     function test_team_5v5() public pure {
