@@ -30,8 +30,8 @@ contract ExampleGame {
         ratings[1] = ratingOf[opponent];
 
         uint256[] memory ranks = new uint256[](2);
-        ranks[0] = isWin ? 0 : 1;
-        ranks[1] = isWin ? 1 : 0;
+        ranks[0] = isWin ? 1 : 0;
+        ranks[1] = isWin ? 0 : 1;
 
         Rating[] memory nextRatings = LibSkill.updateRatings(ratings, ranks);
         ratingOf[msg.sender] = nextRatings[0];
