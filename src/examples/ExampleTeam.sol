@@ -1,19 +1,9 @@
-## LibSkill
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
 
-Add to your project (requires [foundry](https://book.getfoundry.sh/)):
+import {LibSkill, Rating} from "../LibSkill.sol";
 
-```bash
-forge install <>
-```
-
----
-
-# Usage
-
-```solidity
-import {LibSkill, Rating} from "solskill/LibSkill.sol";
-
-contract ExampleGame {
+contract ExampleTeam {
     mapping(address => Rating) public ratingOf;
 
     function init() public {
@@ -33,10 +23,8 @@ contract ExampleGame {
         ranks[0] = isWin ? 0 : 1;
         ranks[1] = isWin ? 1 : 0;
 
-        Rating[] memory nextRatings = LibSkill.updateRatings(ratings, ranks);
+        Rating[] memory nextRatings = LibSkill.updateArenaRatings(ratings, ranks);
         ratingOf[msg.sender] = nextRatings[0];
         ratingOf[opponent] = nextRatings[1];
     }
 }
-
-```
