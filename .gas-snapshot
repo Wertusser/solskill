@@ -1,0 +1,8 @@
+ExampleArenaTest:testFuzz_arena(address[]) (runs: 259, μ: 7969164, ~: 7721408)
+ExampleTeamTest:testFuzz_team(address[5],address[5]) (runs: 259, μ: 679608, ~: 679781)
+LibSkillTest:test_arena_2players() (gas: 39465)
+LibSkillTest:test_arena_3players() (gas: 67076)
+LibSkillTest:test_arena_4players() (gas: 102071)
+LibSkillTest:test_team_2v2() (gas: 79351)
+LibSkillTest:test_team_2v2v2() (gas: 129767)
+LibSkillTest:test_team_5v5() (gas: 153899)
