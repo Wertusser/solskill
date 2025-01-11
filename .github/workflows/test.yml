@@ -1,34 +1,36 @@
-name: test
+name: ci
 
-on: workflow_dispatch
-
-env:
-  FOUNDRY_PROFILE: ci
+on: [push]
 
 jobs:
-  check:
-    strategy:
-      fail-fast: true
-
-    name: Foundry project
+  tests:
+    name: Forge Testing
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+      - name: dependencies
+        run: forge install
+      - name: tests
+        run: forge test --via-ir
 
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes --via-ir
-        id: build
-
-      - name: Run Forge tests
-        run: |
-          forge test -vvv --via-ir
-        id: test
+  snapshot:
+    name: Forge Snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      - name: dependencies
+        run: forge install
+      - name: check contract sizes
+        run: forge build --sizes --via-ir
+      - name: check gas snapshots
+        run: forge snapshot --check --via-ir
