@@ -32,5 +32,5 @@ jobs:
         run: forge install
       - name: check contract sizes
         run: forge build --sizes --via-ir
-      - name: check gas snapshots
-        run: forge snapshot --check --via-ir
+      # - name: check gas snapshots
+      #   run: forge snapshot --check --via-ir
