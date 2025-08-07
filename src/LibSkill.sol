@@ -144,8 +144,13 @@ library LibSkill {
         require(n == rank.length, "LibSkill: ranks length mismatch");
         teams = teams_;
 
+        Rating[] memory teamRatings = new Rating[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            teamRatings[i] = teamRating(teams_[i]);
+        }
+
         for (uint256 i; i < n; ++i) {
-            Rating memory team0 = teamRating(teams_[i]);
+            Rating memory team0 = teamRatings[i];
             int256 team0sigma = wadSqrt(team0.sigma2);
 
             int256 omega = 0;
@@ -153,7 +158,7 @@ library LibSkill {
 
             for (uint256 q; q < n; ++q) {
                 if (i == q) continue;
-                Rating memory team1 = teamRating(teams_[q]);
+                Rating memory team1 = teamRatings[q];
 
                 (int256 o, int256 d) = getUpdateValues(
                     team0, team1, getOutcome(rank[i], rank[q]), team0sigma
