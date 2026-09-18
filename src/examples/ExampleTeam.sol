@@ -19,6 +19,7 @@ contract ExampleTeam {
         require(teamA.length > 0, "teamA not initialized");
         require(teamB.length > 0, "teamB not initialized");
 
+        // Toy-only outcome source. Production games must resolve outcomes securely.
         bool isWin = uint256(blockhash(block.number - 1)) % 2 == 0;
 
         Rating[][] memory ratings = new Rating[][](2);

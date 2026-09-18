@@ -31,6 +31,15 @@ library LibSkill {
     int256 private constant INITIAL_SIGMA2 = 69444444444444444444; // (25 / 3)^2 in wad
     int256 private constant DOUBLED_BETA2 = 34722222222222222222; // 2 * (25 / 6) ^ 2 in wad
     int256 private constant LOWER_BOUND_K = 100000000000000; // 0.0001 in wad
+    uint256 private constant MAX_ARENA_PLAYERS = 16;
+    uint256 private constant MAX_TEAMS = 16;
+    uint256 private constant MAX_PLAYERS_PER_TEAM = 8;
+
+    error InvalidArenaPlayerCount(uint256 count);
+    error InvalidTeamCount(uint256 count);
+    error InvalidTeamSize(uint256 teamIndex, uint256 count);
+    error InvalidSigma2();
+    error InvalidRankConstant();
 
     function rating() internal pure returns (Rating memory) {
         return Rating(INITIAL_MU, INITIAL_SIGMA2);
@@ -42,6 +51,16 @@ library LibSkill {
 
     function teamRating(Rating[] memory ratings)
         public
+        pure
+        returns (Rating memory)
+    {
+        _validateTeam(ratings, 0);
+
+        return _teamRating(ratings);
+    }
+
+    function _teamRating(Rating[] memory ratings)
+        private
         pure
         returns (Rating memory)
     {
@@ -61,7 +80,9 @@ library LibSkill {
         pure
         returns (int256)
     {
-        return wadSqrt(player0.sigma2 + player1.sigma2 + DOUBLED_BETA2);
+        _validateRating(player0);
+        _validateRating(player1);
+        return _getRankConstant(player0, player1);
     }
 
     function bradleyTerryProbability(
@@ -69,9 +90,11 @@ library LibSkill {
         Rating memory player1,
         int256 rankConst
     ) public pure returns (int256 p0, int256 p1) {
-        int256 exp = wadExp(wadDiv(player1.mu - player0.mu, rankConst));
-        p0 = wadDiv(1e18, (1e18 + exp));
-        p1 = 1e18 - p0;
+        _validateRating(player0);
+        _validateRating(player1);
+        if (rankConst <= 0) revert InvalidRankConstant();
+
+        return _bradleyTerryProbability(player0, player1, rankConst);
     }
 
     function getUpdateValues(
@@ -80,9 +103,9 @@ library LibSkill {
         int256 outcome,
         int256 player0sigma
     ) internal pure returns (int256 omega, int256 delta) {
-        int256 rankConst = getRankConstant(player0, player1);
+        int256 rankConst = _getRankConstant(player0, player1);
         (int256 p0, int256 p1) =
-            bradleyTerryProbability(player0, player1, rankConst);
+            _bradleyTerryProbability(player0, player1, rankConst);
 
         omega = wadMul(wadDiv(player0.sigma2, rankConst), (outcome - p0));
 
@@ -107,11 +130,20 @@ library LibSkill {
     {
         uint256 n = players_.length;
         require(n == rank.length, "LibSkill: ranks length mismatch");
-        players = players_;
+        if (n < 2 || n > MAX_ARENA_PLAYERS) {
+            revert InvalidArenaPlayerCount(n);
+        }
+
+        players = new Rating[](n);
 
         for (uint256 i; i < n; ++i) {
+            _validateRating(players_[i]);
+        }
+
+        for (uint256 i; i < n; ++i) {
+            Rating memory player0 = players_[i];
             //@dev sqrt(sigma^2) of player0 can be precomputed to save gas in nested the loop
-            int256 player0sigma = wadSqrt(players_[i].sigma2);
+            int256 player0sigma = wadSqrt(player0.sigma2);
 
             int256 omega = 0;
             int256 delta = 0;
@@ -120,7 +152,7 @@ library LibSkill {
                 if (i == q) continue;
 
                 (int256 o, int256 d) = getUpdateValues(
-                    players_[i],
+                    player0,
                     players_[q],
                     getOutcome(rank[i], rank[q]),
                     player0sigma
@@ -129,9 +161,10 @@ library LibSkill {
                 delta += d;
             }
 
-            players[i].mu = players[i].mu + omega;
-            players[i].sigma2 =
-                wadMul(players[i].sigma2, max(1e18 - delta, LOWER_BOUND_K));
+            players[i] = Rating({
+                mu: player0.mu + omega,
+                sigma2: wadMul(player0.sigma2, max(1e18 - delta, LOWER_BOUND_K))
+            });
         }
     }
 
@@ -142,11 +175,13 @@ library LibSkill {
     {
         uint256 n = teams_.length;
         require(n == rank.length, "LibSkill: ranks length mismatch");
+        if (n < 2 || n > MAX_TEAMS) revert InvalidTeamCount(n);
         teams = teams_;
 
         Rating[] memory teamRatings = new Rating[](n);
         for (uint256 i = 0; i < n; ++i) {
-            teamRatings[i] = teamRating(teams_[i]);
+            _validateTeam(teams_[i], i);
+            teamRatings[i] = _teamRating(teams_[i]);
         }
 
         for (uint256 i; i < n; ++i) {
@@ -169,8 +204,9 @@ library LibSkill {
 
             uint256 team0Size = teams_[i].length;
             for (uint256 j; j < team0Size; ++j) {
-                teams[i][j].mu +=
-                    wadMul(wadDiv(teams[i][j].mu, team0.mu), omega);
+                teams[i][j].mu += wadMul(
+                    wadDiv(teams[i][j].sigma2, team0.sigma2), omega
+                );
                 teams[i][j].sigma2 = wadMul(
                     teams[i][j].sigma2,
                     max(
@@ -182,6 +218,42 @@ library LibSkill {
                     )
                 );
             }
+        }
+    }
+
+    function _validateRating(Rating memory player) private pure {
+        if (player.sigma2 <= 0) revert InvalidSigma2();
+    }
+
+    function _getRankConstant(Rating memory player0, Rating memory player1)
+        private
+        pure
+        returns (int256)
+    {
+        return wadSqrt(player0.sigma2 + player1.sigma2 + DOUBLED_BETA2);
+    }
+
+    function _bradleyTerryProbability(
+        Rating memory player0,
+        Rating memory player1,
+        int256 rankConst
+    ) private pure returns (int256 p0, int256 p1) {
+        int256 exp = wadExp(wadDiv(player1.mu - player0.mu, rankConst));
+        p0 = wadDiv(1e18, (1e18 + exp));
+        p1 = 1e18 - p0;
+    }
+
+    function _validateTeam(Rating[] memory team, uint256 teamIndex)
+        private
+        pure
+    {
+        uint256 size = team.length;
+        if (size == 0 || size > MAX_PLAYERS_PER_TEAM) {
+            revert InvalidTeamSize(teamIndex, size);
+        }
+
+        for (uint256 i; i < size; ++i) {
+            _validateRating(team[i]);
         }
     }
 }

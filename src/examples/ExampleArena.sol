@@ -22,6 +22,7 @@ contract ExampleArena {
         Rating memory ratingB = ratingOf[opponent];
         if (ratingB.mu == 0) ratingB = _init(opponent);
 
+        // Toy-only outcome source. Production games must resolve outcomes securely.
         bool isWin = uint256(blockhash(block.number - 1)) % 2 == 0;
 
         Rating[] memory ratings = new Rating[](2);
@@ -29,8 +30,8 @@ contract ExampleArena {
         ratings[1] = ratingB;
 
         uint256[] memory ranks = new uint256[](2);
-        ranks[0] = isWin ? 1 : 0;
-        ranks[1] = isWin ? 0 : 1;
+        ranks[0] = isWin ? 0 : 1;
+        ranks[1] = isWin ? 1 : 0;
 
         Rating[] memory nextRatings =
             LibSkill.updateArenaRatings(ratings, ranks);

@@ -10,6 +10,9 @@ forge install Wertusser/solskill
 
 # Usage
 
+Arena updates accept 2–16 players. Team updates accept 2–16 non-empty teams,
+with up to 8 players per team. Every rating must have `sigma2 > 0`.
+
 ```solidity
 import {LibSkill, Rating} from "solskill/LibSkill.sol";
 
@@ -23,6 +26,7 @@ contract ExampleGame {
     function fight(address opponent) public {
         require(ratingOf[opponent].mu > 0, "opponent not initialized");
 
+        // Toy-only outcome source. Production games must resolve outcomes securely.
         bool isWin = uint256(blockhash(block.number - 1)) % 2 == 0;
 
         Rating[] memory ratings = new Rating[](2);
@@ -30,10 +34,11 @@ contract ExampleGame {
         ratings[1] = ratingOf[opponent];
 
         uint256[] memory ranks = new uint256[](2);
-        ranks[0] = isWin ? 1 : 0;
-        ranks[1] = isWin ? 0 : 1;
+        // Smaller rank is better: 0 is the winner.
+        ranks[0] = isWin ? 0 : 1;
+        ranks[1] = isWin ? 1 : 0;
 
-        Rating[] memory nextRatings = LibSkill.updateRatings(ratings, ranks);
+        Rating[] memory nextRatings = LibSkill.updateArenaRatings(ratings, ranks);
         ratingOf[msg.sender] = nextRatings[0];
         ratingOf[opponent] = nextRatings[1];
     }

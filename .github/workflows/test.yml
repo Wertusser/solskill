@@ -12,9 +12,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
-      - name: dependencies
-        run: forge install
+          version: v1.7.1
       - name: tests
         run: forge test --via-ir
 
@@ -27,9 +25,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
-      - name: dependencies
-        run: forge install
+          version: v1.7.1
       - name: check contract sizes
         run: forge build --sizes --via-ir
       # - name: check gas snapshots
